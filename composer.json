@@ -3,7 +3,7 @@
     "type": "library",
     "description": "Midleware for Sabre Caldav",
     "keywords": ["sabre", "CalDAV"],
-    "homepage": "etxea.net",
+    "homepage": "https://github.com/Etxea/sabremw",
     "license" : "GPL-2",
     "authors": [
         {

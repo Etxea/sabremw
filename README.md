@@ -1,4 +1,4 @@
 sabremw
 =======
 
-Sabre MW es un iddleware para añadir objetos a un servidor sabre
+Sabre MW es un middleware para añadir objetos a un servidor sabre
