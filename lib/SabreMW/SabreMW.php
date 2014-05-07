@@ -14,12 +14,18 @@ namespace SabreMW;
 
 
 /**
- * Factory class for calendar handling
+ * clase para la gestiń de Objectos en el CalDAV Sabre
  *
- * @author Yohan Giarelli <yohan@giarel.li>
+ * @author Jon Latorre Martinez <info@etxea.net>
  */
 class SabreMW
 {
+    
+    function __construct($bd) {
+        $this->bd = $bd;
+         
+    }
+    
 	/*
      * Funcion de prueba que devuelve hola mundo
      * return string
@@ -49,4 +55,16 @@ class SabreMW
 		//echo "<pre>".$vcalendar->serialize()."</pre>";
 		return $vcalendar->serialize();
 	}
+    
+    /*
+     * 
+     */
+    public function addUser($username,$password)
+    {
+        //Ciframos la password
+        $pass_md5 = md5($username.':SabreDAV:'.$password);
+        $db->insert('users',array('username'=>$data['username'],'digesta1'=>$pass_md5));
+            // INSERT INTO calendars (principaluri, displayname, uri, description, components, ctag, transparent) VALUES
+            // ('principals/admin','default calendar','default','','VEVENT,VTODO','1', '0');
+    }
 }
