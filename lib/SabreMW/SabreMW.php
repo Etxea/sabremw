@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace SabreMW;
+namespace Etxea;
 
 
 
@@ -21,8 +21,8 @@ namespace SabreMW;
 class SabreMW
 {
     
-    function __construct($bd) {
-        $this->bd = $bd;
+    function __construct($db) {
+        $this->db = $db;
          
     }
     
@@ -40,20 +40,11 @@ class SabreMW
      */
     public function testEvento()
     {
+        $ret = $this->addEvent("admin",'Curiosity launch','Cape Carnival','20140508');
+        echo "Creado el evento ".$ret;
+        if ( $this->delEvent($ret) )
+            echo "Evento borrado";
 		
-		$event = \Sabre\VObject\Component::create('VEVENT');
-
-		$event->SUMMARY = 'Curiosity launch';
-		$event->DTSTART = '20111126T150202Z';
-		$event->LOCATION = 'Cape Carnival';
-		//echo "<h1>Evento</h1>";
-		//echo "<pre>".$event->serialize()."</pre>";
-
-		$vcalendar = new \Sabre\VObject\Component\VCalendar();
-		$vcalendar->add($event);
-		//echo "<h1>calendario</h1>";
-		//echo "<pre>".$vcalendar->serialize()."</pre>";
-		return $vcalendar->serialize();
 	}
     
     /*
@@ -67,4 +58,46 @@ class SabreMW
             // INSERT INTO calendars (principaluri, displayname, uri, description, components, ctag, transparent) VALUES
             // ('principals/admin','default calendar','default','','VEVENT,VTODO','1', '0');
     }
+    public function addEvent($calendar,$summary,$location,$fecha)
+    {
+        //echo "Vamos a crear $calendar,$summary,$location,$fecha ";
+        $uid =  uniqid();
+        $event = \Sabre\VObject\Component::create('VEVENT');
+		$event->SUMMARY = $summary;
+        $event->DTSTART = $fecha;
+        $event->LOCATION = $location;
+        $event->UID = $uid;
+        $vcalendar = new \Sabre\VObject\Component\VCalendar();
+		$vcalendar->add($event);
+        $etag = md5($vcalendar->serialize());
+        $firstOccurence = $event->DTSTART->getDateTime()->getTimeStamp();
+        $lastOccurence = $firstOccurence;
+        $size = strlen($vcalendar->serialize());
+        //echo $vcalendar->serialize();
+        //echo "Vamos a introducir en BBDD el etag $etag el size $size y el tiempo $firstOccurence";
+        $ret= $this->db->insert('calendarobjects',array('calendardata'=>$vcalendar->serialize(),'uri'=>$uid.".ics",'calendarid'=>1,'etag'=>$etag,'size'=>$size,'componenttype'=>'VEVENT','firstoccurence'=>$firstOccurence,'lastoccurence'=>$lastOccurence));
+        $id = $this->db->lastInsertId();
+        
+        //echo "Insercion hecha con ID: ".$id;
+        //echo "Vamos a introducir en BBDD el etag $etag el size $size y el tiempo $firstOccurence";
+        return $id;
+    }
+    public function delEvent($id)
+    {
+        $ret = $this->db->delete('calendarobjects', array('id' => $id));
+        if ($ret == 1) 
+        {  
+            //A borrado 1 columna 
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+    public function getUserCalendar($username) {
+        $ret = $this->db->fetchAssoc('SELECT * FROM calendars WHERE principaluri = ?', array("principals/".$username));
+        return $ret['id'];
+    }
+    
 }

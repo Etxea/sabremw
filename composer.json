@@ -21,16 +21,19 @@
         "phpunit/phpunit" : "3.7.*",
         "evert/phpdoc-md" : "~0.0.7",
         "phing/phing" : "2.4.14",
-	"doctrine/dbal": "2.3.4"
+        "doctrine/dbal": "2.3.4"
     },
     "source": {
          "url": "git@github.com:Etxea/sabremw.git",
          "type": "git",
-         "reference": "master"
+         "reference": "master",
+         "autoload": {
+                    "classmap": ["lib/"]
+                }
     },
     "autoload": {
         "psr-0" : {
-            "SabreMW"     : "lib/"
+            "Etxea"     : "lib/"
         }
     }
 }
