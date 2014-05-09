@@ -98,12 +98,14 @@ class SabreMW
     {
         //echo "Vamos a crear $calendar,$summary,$location,$fecha ";
         $uid =  uniqid();
-        $event = \Sabre\VObject\Component::create('VEVENT');
-		$event->SUMMARY = $summary;
-        $event->DTSTART = $fecha;
-        $event->LOCATION = $location;
-        $event->UID = $uid;
         $vcalendar = new \Sabre\VObject\Component\VCalendar();
+        $event = $vcalendar->add('VEVENT', [
+            'SUMMARY' => $summary,
+            'DTSTART' => $fecha,
+            'LOCATION' => $location,
+            'UID' => $uid
+        ]);
+        
 		$vcalendar->add($event);
         $etag = md5($vcalendar->serialize());
         $firstOccurence = $event->DTSTART->getDateTime()->getTimeStamp();
@@ -111,7 +113,7 @@ class SabreMW
         $size = strlen($vcalendar->serialize());
         //echo $vcalendar->serialize();
         //echo "Vamos a introducir en BBDD el etag $etag el size $size y el tiempo $firstOccurence";
-        $ret= $this->db->insert('calendarobjects',array('calendardata'=>$vcalendar->serialize(),'uri'=>$uid.".ics",'calendarid'=>1,'etag'=>$etag,'size'=>$size,'componenttype'=>'VEVENT','firstoccurence'=>$firstOccurence,'lastoccurence'=>$lastOccurence));
+        $ret= $this->db->insert('calendarobjects',array('calendardata'=>$vcalendar->serialize(),'uri'=>$uid.".ics",'calendarid'=>$calendar,'etag'=>$etag,'size'=>$size,'componenttype'=>'VEVENT','firstoccurence'=>$firstOccurence,'lastoccurence'=>$lastOccurence));
         $id = $this->db->lastInsertId();
         
         //echo "Insercion hecha con ID: ".$id;
