@@ -52,11 +52,47 @@ class SabreMW
      */
     public function addUser($username,$password)
     {
+        $principal_uri = 'principals/'.$username;
         //Ciframos la password
         $pass_md5 = md5($username.':SabreDAV:'.$password);
-        $db->insert('users',array('username'=>$data['username'],'digesta1'=>$pass_md5));
-            // INSERT INTO calendars (principaluri, displayname, uri, description, components, ctag, transparent) VALUES
-            // ('principals/admin','default calendar','default','','VEVENT,VTODO','1', '0');
+        $ret = 0;
+        $ret = $this->db->insert('users',array('username'=>$username,'digesta1'=>$pass_md5));
+        if ($ret!=1) {
+            die("NO se ha podido insertar el user");
+        }
+        $ret = 0;
+        $ret = $this->db->insert('principals',array('uri'=>$principal_uri,'displayname'=>$username));
+        if ($ret!=1) {
+            die("NO se ha podido insertar el principal");
+        }
+        $ret = 0;
+        $ret = $this->db->insert('calendars',array('principaluri'=>$principal_uri,'displayname'=>'default','uri'=>'default','components'=>'VEVENT,VTODO'));        
+        if ($ret!=1) {
+            die("NO se ha podido insertar el calendar");
+        }
+    }
+    
+    /*
+    * 
+    */
+    public function delUser($username)
+    {
+        echo "Vamos a borrar el usuario $username";
+        $principal_uri = 'principals/'.$username;
+        //Obtenemos los calendarios
+        $calendars = $this->db->fetchAll('SELECT id FROM calendars WHERE principaluri = ?',array($principal_uri));
+        foreach($calendars as $calendar) {
+            //Borramos los eventos
+            $this->db->delete('calendarobjects',array('calendarid'=>$calendar['id']));
+            //Borramos el calendario
+            $this->db->delete('calendars',array('id'=>$calendar['id']));
+        }
+        //Borramos de principals
+        $this->db->delete('principals',array('uri'=>$principal_uri));
+        //Borramos de users
+        $this->db->delete('users',array('username'=>$username));
+        
+            
     }
     public function addEvent($calendar,$summary,$location,$fecha)
     {
