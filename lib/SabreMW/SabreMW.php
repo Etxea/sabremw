@@ -50,21 +50,24 @@ class SabreMW
     /*
      * 
      */
-    public function addUser($username,$password)
+    public function addUser($username)
     {
         $principal_uri = 'principals/'.$username;
         //Ciframos la password
-        $pass_md5 = md5($username.':SabreDAV:'.$password);
-        $ret = 0;
+        // LO hemos pasado a la gestion de user de la app
+        //$pass_md5 = md5($username.':SabreDAV:'.$password);
+        /* $ret = 0;
         $ret = $this->db->insert('users',array('username'=>$username,'digesta1'=>$pass_md5));
         if ($ret!=1) {
             die("NO se ha podido insertar el user");
-        }
+        }*/
+        //Generamos el principal
         $ret = 0;
         $ret = $this->db->insert('principals',array('uri'=>$principal_uri,'displayname'=>$username));
         if ($ret!=1) {
             die("NO se ha podido insertar el principal");
         }
+        //Generamos el calendario default
         $ret = 0;
         $ret = $this->db->insert('calendars',array('principaluri'=>$principal_uri,'displayname'=>'default','uri'=>'default','components'=>'VEVENT,VTODO'));        
         if ($ret!=1) {
@@ -73,7 +76,7 @@ class SabreMW
     }
     
     /*
-    * 
+    * Esta función borra el principal y los calendarios del usuario proporcionado
     */
     public function delUser($username)
     {
@@ -89,8 +92,7 @@ class SabreMW
         }
         //Borramos de principals
         $this->db->delete('principals',array('uri'=>$principal_uri));
-        //Borramos de users
-        $this->db->delete('users',array('username'=>$username));
+        
         
             
     }
