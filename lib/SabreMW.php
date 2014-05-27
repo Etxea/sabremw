@@ -1,18 +1,5 @@
 <?php
 
-/*
- * This file is part of CalendR, a Fréquence web project.
- *
- * (c) 2012 Fréquence web
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
-
-namespace Etxea;
-
-
-
 /**
  * clase para la gestiń de Objectos en el CalDAV Sabre
  *
@@ -26,13 +13,13 @@ class SabreMW
          
     }
     
-	/*
+    /*
      * Funcion de prueba que devuelve hola mundo
      * return string
      */
-    public function helloWorld()
+    public function test()
     {
-        return "Hola mundo!";
+        return True;
     }
     /*
      * Funcion de prueba que genera un EVENTO y un VCALENDAR que lo envuelve
@@ -50,17 +37,16 @@ class SabreMW
     /*
      * 
      */
-    public function addUser($username)
+    public function addUser($username,$password)
     {
         $principal_uri = 'principals/'.$username;
         //Ciframos la password
-        // LO hemos pasado a la gestion de user de la app
-        //$pass_md5 = md5($username.':SabreDAV:'.$password);
-        /* $ret = 0;
+        $pass_md5 = md5($username.':SabreDAV:'.$password);
+        $ret = 0;
         $ret = $this->db->insert('users',array('username'=>$username,'digesta1'=>$pass_md5));
         if ($ret!=1) {
             die("NO se ha podido insertar el user");
-        }*/
+        }
         //Generamos el principal
         $ret = 0;
         $ret = $this->db->insert('principals',array('uri'=>$principal_uri,'displayname'=>$username));
@@ -92,9 +78,6 @@ class SabreMW
         }
         //Borramos de principals
         $this->db->delete('principals',array('uri'=>$principal_uri));
-        
-        
-            
     }
     public function addEvent($calendar,$summary,$location,$fecha)
     {
