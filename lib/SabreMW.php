@@ -10,6 +10,7 @@ class SabreMW
     
     function __construct($db) {
         $this->db = $db;
+        $this->default_calendar = 'uroges';
          
     }
     
@@ -55,7 +56,7 @@ class SabreMW
         }
         //Generamos el calendario default
         $ret = 0;
-        $ret = $this->db->insert('calendars',array('principaluri'=>$principal_uri,'displayname'=>'default','uri'=>'default','components'=>'VEVENT,VTODO'));        
+        $ret = $this->db->insert('calendars',array('principaluri'=>$principal_uri,'displayname'=>$this->default_calendar,'uri'=>$this->default_calendar,'components'=>'VEVENT,VTODO'));        
         if ($ret!=1) {
             die("NO se ha podido insertar el calendar");
         }
@@ -79,13 +80,17 @@ class SabreMW
         //Borramos de principals
         $this->db->delete('principals',array('uri'=>$principal_uri));
     }
-    public function addEvent($calendar,$summary,$location,$fecha)
+    
+    
+    
+    public function addEvent($calendar,$titulo,$descripcion,$fecha)
     {
         //echo "Vamos a crear $calendar,$summary,$location,$fecha ";
         $uid =  uniqid();
         $vcalendar = new \Sabre\VObject\Component\VCalendar();
         $event = $vcalendar->add('VEVENT', [
-            'SUMMARY' => $summary,
+            'SUMMARY' => $titulo,
+            'DESCRIPTION' => $descripcion,
             'DTSTART' => $fecha,
             'LOCATION' => $location,
             'UID' => $uid
@@ -96,7 +101,9 @@ class SabreMW
         $firstOccurence = $event->DTSTART->getDateTime()->getTimeStamp();
         $lastOccurence = $firstOccurence;
         $size = strlen($vcalendar->serialize());
-        //echo $vcalendar->serialize();
+        
+        echo $vcalendar->serialize();
+        
         //echo "Vamos a introducir en BBDD el etag $etag el size $size y el tiempo $firstOccurence";
         $ret= $this->db->insert('calendarobjects',array('calendardata'=>$vcalendar->serialize(),'uri'=>$uid.".ics",'calendarid'=>$calendar,'etag'=>$etag,'size'=>$size,'componenttype'=>'VEVENT','firstoccurence'=>$firstOccurence,'lastoccurence'=>$lastOccurence));
         $id = $this->db->lastInsertId();
@@ -105,6 +112,42 @@ class SabreMW
         //echo "Vamos a introducir en BBDD el etag $etag el size $size y el tiempo $firstOccurence";
         return $id;
     }
+    
+    public function updateEvent($event_id,$calendar,$titulo,$descripcion,$fecha)
+    {
+        //leemos el evento previo
+        $evento = $this->db->fetchAssoc('SELECT * FROM calendarobjects WHERE id = ?', array($event_id));
+        var_dump($evento);
+        //Borramos el evento previo
+        $ret = $this->db->delete('calendarobjects', array('id' => $id));
+        
+        //echo "Vamos a crear $calendar,$summary,$location,$fecha ";
+        $uid =  uniqid();
+        $vcalendar = new \Sabre\VObject\Component\VCalendar();
+        $event = $vcalendar->add('VEVENT', [
+            'SUMMARY' => $titulo,
+            'DESCRIPTION' => $descripcion,
+            'DTSTART' => $fecha,
+            'LOCATION' => $location,
+            'UID' => $uid
+        ]);
+        
+		$vcalendar->add($event);
+        $etag = md5($vcalendar->serialize());
+        $firstOccurence = $event->DTSTART->getDateTime()->getTimeStamp();
+        $lastOccurence = $firstOccurence;
+        $size = strlen($vcalendar->serialize());
+        
+        echo $vcalendar->serialize();
+        
+        //echo "Vamos a introducir en BBDD el etag $etag el size $size y el tiempo $firstOccurence";
+        $ret= $this->db->insert('calendarobjects',array('id'=>$event_id,'calendardata'=>$vcalendar->serialize(),'uri'=>$uid.".ics",'calendarid'=>$calendar,'etag'=>$etag,'size'=>$size,'componenttype'=>'VEVENT','firstoccurence'=>$firstOccurence,'lastoccurence'=>$lastOccurence));
+    
+        //echo "Insercion hecha con ID: ".$id;
+        //echo "Vamos a introducir en BBDD el etag $etag el size $size y el tiempo $firstOccurence";
+        return $event_id;
+    }
+    
     public function delEvent($id)
     {
         $ret = $this->db->delete('calendarobjects', array('id' => $id));
