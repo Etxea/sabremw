@@ -81,11 +81,18 @@ class SabreMW
         $this->db->delete('principals',array('uri'=>$principal_uri));
     }
     
-    
+    public function getEvent($id) {
+        //echo "Buscamos el evento con id ".$id."<br>";
+        $ret = $this->db->fetchAssoc('SELECT * FROM calendarobjects WHERE id = ?', array($id));
+        //var_dump($ret);
+        return $ret;
+    }
     
     public function addEvent($calendar,$titulo,$descripcion,$fecha)
     {
-        //echo "Vamos a crear $calendar,$summary,$location,$fecha ";
+        //FIXME esto debería ser una variable
+        $location=$titulo;
+        echo "Vamos a crear $calendar,$titulo,$descripcion,$fecha ";
         $uid =  uniqid();
         $vcalendar = new \Sabre\VObject\Component\VCalendar();
         $event = $vcalendar->add('VEVENT', [
@@ -102,7 +109,7 @@ class SabreMW
         $lastOccurence = $firstOccurence;
         $size = strlen($vcalendar->serialize());
         
-        echo $vcalendar->serialize();
+        //echo $vcalendar->serialize();
         
         //echo "Vamos a introducir en BBDD el etag $etag el size $size y el tiempo $firstOccurence";
         $ret= $this->db->insert('calendarobjects',array('calendardata'=>$vcalendar->serialize(),'uri'=>$uid.".ics",'calendarid'=>$calendar,'etag'=>$etag,'size'=>$size,'componenttype'=>'VEVENT','firstoccurence'=>$firstOccurence,'lastoccurence'=>$lastOccurence));
@@ -115,12 +122,14 @@ class SabreMW
     
     public function updateEvent($event_id,$calendar,$titulo,$descripcion,$fecha)
     {
-        //leemos el evento previo
-        $evento = $this->db->fetchAssoc('SELECT * FROM calendarobjects WHERE id = ?', array($event_id));
-        var_dump($evento);
+        //FIXME esto debería ser una variable
+        $location=$titulo;
+        //echo "leemos el evento previo<br>";
+        //$evento = $this->db->fetchAssoc('SELECT * FROM calendarobjects WHERE id = ?', array($event_id));
+        //var_dump($evento);
         //Borramos el evento previo
-        $ret = $this->db->delete('calendarobjects', array('id' => $id));
-        
+        $ret = $this->db->delete('calendarobjects', array('id' => $event_id));
+        echo "Borrado evento previo con id ".$event_id." y resultado ".$ret;
         //echo "Vamos a crear $calendar,$summary,$location,$fecha ";
         $uid =  uniqid();
         $vcalendar = new \Sabre\VObject\Component\VCalendar();
@@ -138,12 +147,12 @@ class SabreMW
         $lastOccurence = $firstOccurence;
         $size = strlen($vcalendar->serialize());
         
-        echo $vcalendar->serialize();
+        //echo $vcalendar->serialize();
         
         //echo "Vamos a introducir en BBDD el etag $etag el size $size y el tiempo $firstOccurence";
         $ret= $this->db->insert('calendarobjects',array('id'=>$event_id,'calendardata'=>$vcalendar->serialize(),'uri'=>$uid.".ics",'calendarid'=>$calendar,'etag'=>$etag,'size'=>$size,'componenttype'=>'VEVENT','firstoccurence'=>$firstOccurence,'lastoccurence'=>$lastOccurence));
     
-        //echo "Insercion hecha con ID: ".$id;
+        //echo "Insercion hecha con ID: ".$event_id;
         //echo "Vamos a introducir en BBDD el etag $etag el size $size y el tiempo $firstOccurence";
         return $event_id;
     }
@@ -161,6 +170,7 @@ class SabreMW
             return 0;
         }
     }
+    
     public function getUserCalendar($username) {
         $ret = $this->db->fetchAssoc('SELECT * FROM calendars WHERE principaluri = ?', array("principals/".$username));
         return $ret['id'];
