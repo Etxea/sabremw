@@ -56,7 +56,9 @@ class SabreMW
         }
         //Generamos el calendario default
         $ret = 0;
-        $ret = $this->db->insert('calendars',array('principaluri'=>$principal_uri,'displayname'=>$this->default_calendar,'uri'=>$this->default_calendar,'components'=>'VEVENT,VTODO'));        
+        $ret = $this->db->insert('calendars',
+            array('principaluri'=>$principal_uri,'displayname'=>$this->default_calendar,
+            'synctoken'=>uniqid(),'uri'=>$this->default_calendar,'components'=>'VEVENT,VTODO'));        
         if ($ret!=1) {
             die("NO se ha podido insertar el calendar");
         }
@@ -91,29 +93,46 @@ class SabreMW
     public function addEvent($calendar,$titulo,$descripcion,$fecha)
     {
         //FIXME esto debería ser una variable
-        $location=$titulo;
+        $location="Uroges Cruces";
         echo "Vamos a crear $calendar,$titulo,$descripcion,$fecha ";
-        $uid =  uniqid();
+        $uid =  strtoupper(\Rhumsaa\Uuid\Uuid::uuid4());
+        $inicio = new \DateTime($fecha);
+        $inicio = "VALUE=DATE:".$fecha;
+        //$inicio = $inicio->setTimezone(new DateTimezone("europe/madrid")); 
+        $now = new DateTime("now"); 
+        //$now = $now->setTimezone(new DateTimezone("europe/madrid")); 
         $vcalendar = new \Sabre\VObject\Component\VCalendar();
         $event = $vcalendar->add('VEVENT', [
+            'CREATED' => $now,
+            'UID' => $uid,
             'SUMMARY' => $titulo,
             'DESCRIPTION' => $descripcion,
             'DTSTART' => $fecha,
-            'LOCATION' => $location,
-            'UID' => $uid
+            // 'LOCATION' => $location,
+            
+            'DTSTAMP' => $now,
+            
+            'LAST-MODIFIED'=> $now,
+            'TRANSP' => "TRANSPARENT",
+            'SEQUENCE' => 0
+            
         ]);
         
-		$vcalendar->add($event);
+		//$vcalendar->add($event);
         $etag = md5($vcalendar->serialize());
         $firstOccurence = $event->DTSTART->getDateTime()->getTimeStamp();
         $lastOccurence = $firstOccurence;
         $size = strlen($vcalendar->serialize());
-        
+        //echo "Tenemos el vclandera:<pre>";
         //echo $vcalendar->serialize();
+        //echo "</pre>";
         
         //echo "Vamos a introducir en BBDD el etag $etag el size $size y el tiempo $firstOccurence";
-        $ret= $this->db->insert('calendarobjects',array('calendardata'=>$vcalendar->serialize(),'uri'=>$uid.".ics",'calendarid'=>$calendar,'etag'=>$etag,'size'=>$size,'componenttype'=>'VEVENT','firstoccurence'=>$firstOccurence,'lastoccurence'=>$lastOccurence));
+        $ret= $this->db->insert('calendarobjects',array('calendardata'=>$vcalendar->serialize(),'uri'=>$uid.".ics",'calendarid'=>$calendar,'etag'=>$etag,
+            'size'=>$size,'componenttype'=>'VEVENT','firstoccurence'=>$firstOccurence,'lastoccurence'=>$lastOccurence,'lastmodified'=>$now->getTimestamp()));
         $id = $this->db->lastInsertId();
+       	//Actualizamos el synctoken del calendario
+        $this->updateSyncToken($calendar);
         
         //echo "Insercion hecha con ID: ".$id;
         //echo "Vamos a introducir en BBDD el etag $etag el size $size y el tiempo $firstOccurence";
@@ -123,7 +142,7 @@ class SabreMW
     public function updateEvent($event_id,$calendar,$titulo,$descripcion,$fecha)
     {
         //FIXME esto debería ser una variable
-        $location=$titulo;
+        $location="Uroges Cruces";
         //echo "leemos el evento previo<br>";
         //$evento = $this->db->fetchAssoc('SELECT * FROM calendarobjects WHERE id = ?', array($event_id));
         //var_dump($evento);
@@ -131,27 +150,32 @@ class SabreMW
         $ret = $this->db->delete('calendarobjects', array('id' => $event_id));
         echo "Borrado evento previo con id ".$event_id." y resultado ".$ret;
         //echo "Vamos a crear $calendar,$summary,$location,$fecha ";
-        $uid =  uniqid();
+        $uid =  \Rhumsaa\Uuid\Uuid::uuid4();
         $vcalendar = new \Sabre\VObject\Component\VCalendar();
         $event = $vcalendar->add('VEVENT', [
             'SUMMARY' => $titulo,
             'DESCRIPTION' => $descripcion,
-            'DTSTART' => $fecha,
+            'DTSTART' => new \DateTime($fecha),
             'LOCATION' => $location,
             'UID' => $uid
         ]);
         
-		$vcalendar->add($event);
+		//$vcalendar->add($event);
         $etag = md5($vcalendar->serialize());
         $firstOccurence = $event->DTSTART->getDateTime()->getTimeStamp();
         $lastOccurence = $firstOccurence;
         $size = strlen($vcalendar->serialize());
         
+        //echo "Tenemos el vclandera:<pre>";
         //echo $vcalendar->serialize();
+        //echo "</pre>";
         
         //echo "Vamos a introducir en BBDD el etag $etag el size $size y el tiempo $firstOccurence";
-        $ret= $this->db->insert('calendarobjects',array('id'=>$event_id,'calendardata'=>$vcalendar->serialize(),'uri'=>$uid.".ics",'calendarid'=>$calendar,'etag'=>$etag,'size'=>$size,'componenttype'=>'VEVENT','firstoccurence'=>$firstOccurence,'lastoccurence'=>$lastOccurence));
-    
+        $ret= $this->db->insert('calendarobjects',array('id'=>$event_id,'calendardata'=>$vcalendar->serialize(),'uri'=>$uid.".ics",'calendarid'=>$calendar,'etag'=>$etag,
+            'size'=>$size,'componenttype'=>'VEVENT','firstoccurence'=>$firstOccurence,'lastoccurence'=>$lastOccurence,'lastmodified'=>$now->format('c')));
+
+       	//Actualizamos el synctoken del calendario
+        $this->updateSyncToken($calendar);
         //echo "Insercion hecha con ID: ".$event_id;
         //echo "Vamos a introducir en BBDD el etag $etag el size $size y el tiempo $firstOccurence";
         return $event_id;
@@ -159,7 +183,10 @@ class SabreMW
     
     public function delEvent($id)
     {
+        $event = $this->db->fetchAssoc('SELECT * FROM calendarobjects WHERE id = ?', array($id));
         $ret = $this->db->delete('calendarobjects', array('id' => $id));
+        //Actualizamos el synctoken del calendario
+        $this->updateSyncToken($event['calendarid']);
         if ($ret == 1) 
         {  
             //A borrado 1 columna 
@@ -169,6 +196,23 @@ class SabreMW
         {
             return 0;
         }
+        
+    }
+    
+    public function updateSyncToken($calendar_id) {
+        $calendar = $this->db->fetchAssoc('SELECT * FROM calendars WHERE id = ?', array($calendar_id));
+        //var_dump($calendar);
+        echo "Vamos a actualizar el synctoken de ".$calendar['principaluri']." qu ahora es". $calendar['synctoken']." --- ";
+        $new_synctoken = $calendar['synctoken']+1;
+        $ret = $this->db->update('calendars',array('synctoken'=>$new_synctoken),array('id'=>$calendar_id)); 
+        if ( $ret ==1 ) {
+            echo "Synctoken actualizado a ".$new_synctoken." con resultado".$ret."<br>";
+            return 1;
+        } else {
+            echo "Fallo actualizando synctoken";
+            return -1;
+        }
+        
     }
     
     public function getUserCalendar($username) {
